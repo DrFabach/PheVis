@@ -14,6 +14,7 @@
 #' @param rf should pseudo-labellisation with random forest be used (default is true)
 #' @param p.noise percentage of noise introduced during the noising step (default is 0.3)
 #' @param bool_SAFE A boolean. If TRUE, SAFE selection is done, else it is not (default is TRUE)
+#' @param best_encounter A bolean, if True Surrogate only on current Encounter
 #' 
 #' @return A list
 #' \itemize{
@@ -51,7 +52,8 @@ train_phevis <- function(half_life,
                          p.noise = 0.3,
                          bool_SAFE = TRUE,
                          omega = 2,
-                         GS = NULL){
+                         GS = NULL,
+                         best_encounter=F){
         
         ### check user arguments
         check_arg <- check_arg_train_phevis(half_life = half_life,
@@ -81,7 +83,8 @@ train_phevis <- function(half_life,
                                           date = "START_DATE",
                                           patient_id = "PATIENT_NUM",
                                           encounter_id = "ENCOUNTER_NUM",
-                                          half_life = half_life)
+                                          half_life = half_life,
+                                          best_encounter=best_encounter)
         
         ### cumultate variables if needed
         if(half_life != 0){

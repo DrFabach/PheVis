@@ -11,6 +11,7 @@
 #' @param encounter_id Column name of the encounter id column.
 #' @param omega Constant for the extrema population definition.
 #' @param param param of a previous train_phevis() result.
+#' @param best_encounter A bolean, if True Surrogate only on current Encounter
 #' 
 #' @return A list
 #' \itemize{
@@ -27,7 +28,8 @@ fct_surrogate_quanti <- function(main_icd,
                                  patient_id,
                                  encounter_id,
                                  omega = 2,
-                                 param = NULL){
+                                 param = NULL,
+                                 best_encounter=F){
         ##### compute quantitative surrogate
         # icd
         tot_icd_all <- df[,colnames(df) %in% main_icd]
@@ -67,9 +69,10 @@ fct_surrogate_quanti <- function(main_icd,
                        START_DATE = .data$date,
                        SUR_QUANTI = .data$Correct_value) %>%
                 ungroup()
-        
-        ##### quantile thresholds
         quantile_vec <- build_qantsur(df = df, var.icd = main_icd, omega = omega)
+        
+        if(!best_encounter){
+        ##### quantile thresholds
         
         ##### surrogate quali
         sur_quali <- build_quali(x = cumul$SUR_QUANTI,
@@ -77,7 +80,18 @@ fct_surrogate_quanti <- function(main_icd,
                                  q = quantile_vec["q.sur"])
         
         cumul <- cumul %>% mutate(SUR_QUALI = sur_quali)
-        
+        }else{
+        # BDD<-left_join(df,cumul)  
+        #   
+        # quantile_vec_max <- build_qantsur(df = BDD %>% group_by(PATIENT_NUM) %>% slice(max(SUR_QUANTI)), var.icd = main_icd, omega = omega)
+        # quantile_vec_min <- build_qantsur(df = BDD %>% group_by(PATIENT_NUM) %>% slice(min(SUR_QUANTI)), var.icd = main_icd, omega = omega)
+        # 
+          sur_quali <- build_quali(x = sur,
+                                   p = quantile_vec["p.sur"],
+                                   q = quantile_vec["q.sur"])
+          
+          cumul <- cumul %>% mutate(SUR_QUALI = sur_quali)
+        }
         ##### rolling surrogate
         roll_all <- rolling_var(id = df[,patient_id],
                                 var = sur,
