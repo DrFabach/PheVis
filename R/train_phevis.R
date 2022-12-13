@@ -15,6 +15,12 @@
 #' @param p.noise percentage of noise introduced during the noising step (default is 0.3)
 #' @param bool_SAFE A boolean. If TRUE, SAFE selection is done, else it is not (default is TRUE)
 #' @param best_encounter A bolean, if True Surrogate only on current Encounter
+#' @param by_patient A Bolean, if True and best_encoutner T, select for each patient the best and worst encounter distribute among surrogate
+#' @param resample undersample negative example if to much represented
+#' 
+#' @param    standardise
+#'  @param   other_icd
+#'  @param   other_cui 
 #' 
 #' @return A list
 #' \itemize{
@@ -53,7 +59,13 @@ train_phevis <- function(half_life,
                          bool_SAFE = TRUE,
                          omega = 2,
                          GS = NULL,
-                         best_encounter=F){
+                         best_encounter=F,
+                         by_patient = F,
+                         resample =F,
+                         n_sample = 5,
+                         standardise=F,
+                         other_icd=NULL,
+                         other_cui = NULL){
         
         ### check user arguments
         check_arg <- check_arg_train_phevis(half_life = half_life,
@@ -84,7 +96,11 @@ train_phevis <- function(half_life,
                                           patient_id = "PATIENT_NUM",
                                           encounter_id = "ENCOUNTER_NUM",
                                           half_life = half_life,
-                                          best_encounter=best_encounter)
+                                          best_encounter=best_encounter,
+                                          by_patient=by_patient,
+                                          standardise = standardise,
+                                          other_icd=other_icd,
+                                          other_cui=other_cui)
         
         ### cumultate variables if needed
         if(half_life != 0){
@@ -118,6 +134,22 @@ train_phevis <- function(half_life,
                         ungroup()
         }
         
+        if(resample ){
+        n_0<-sum(df_all_train$SUR_QUALI==0)
+        n_1<-sum(df_all_train$SUR_QUALI==1)
+        
+        if(n_0>n_sample*n_1){
+          warning("undersampling des 0")
+          poids_prob<- as.vector(apply(df[,var_vec],1,function(x) sum(x, na.rm = T)))+1
+          df_all_train$SUR_QUALI[
+            sample(x=which(df_all_train$SUR_QUALI==0),
+                   size =(n_0-(n_1*n_sample)),
+                   prob = poids_prob[which(df_all_train$SUR_QUALI==0)])]<-3
+          
+       
+        }
+        }
+        
         ### select only variables used in the X matrix
         df_x_train <- df_all_train %>%
                 select(-.data$SUR_QUALI,
@@ -144,6 +176,7 @@ train_phevis <- function(half_life,
                                       PRED = model$model$prediction,
                                       SUR_QUANTI = df_all_train$SUR_QUANTI,
                                       SUR_QUALI = df_all_train$SUR_QUALI)
+        
         
         ### add the gold-standard if provided
         if(!is.null(GS)){
